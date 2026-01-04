@@ -23,11 +23,11 @@ app.use("/uploads", express.static("uploads"));
 const PORT = process.env.PORT || 3000;
 const ADMIN_USER = process.env.ADMIN_USER || "red_admin";
 const ADMIN_PASS = process.env.ADMIN_PASS || "R3dD3v!l_2026";
-const SECRET_KEY = process.env.SECRET_KEY || "R3dD3v!l_S3cr3t_2026";
 
 // ملفات المستخدمين والرسائل
 const USERS_FILE = "users.json";
 const MSG_FILE = "messages.json";
+
 if (!fs.existsSync(USERS_FILE)) fs.writeFileSync(USERS_FILE, "{}");
 if (!fs.existsSync(MSG_FILE)) fs.writeFileSync(MSG_FILE, "[]");
 if (!fs.existsSync("uploads")) fs.mkdirSync("uploads");
@@ -77,25 +77,32 @@ app.post("/login", async (req, res) => {
 // حفظ / تعديل الاسم والصورة بعد تسجيل الدخول
 app.post("/profile", (req, res) => {
   const { token, name } = req.body;
-  let users = load(USERS_FILE);
-  let user = Object.keys(users).find(u => users[u].token === token);
-  if (!user) return res.sendStatus(403);
+  if(!token || !name) return res.sendStatus(400);
 
-  users[user].name = name;
+  let users = load(USERS_FILE);
+  let userKey = Object.keys(users).find(u => users[u].token === token);
+  if (!userKey) return res.sendStatus(403);
+
+  users[userKey].name = name;
 
   // حفظ صورة إذا موجودة، وإذا لم يرفع المستخدم صورة يتم وضع الصورة الافتراضية
   if (req.files && req.files.avatar) {
     let avatar = req.files.avatar;
     let ext = path.extname(avatar.name);
-    let filename = `${user}${ext}`;
+    let filename = `${userKey}${ext}`;
     avatar.mv(`uploads/${filename}`, err => { if(err) console.log(err); });
-    users[user].avatar = `/uploads/${filename}`;
-  } else if(!users[user].avatar) {
-    users[user].avatar = "https://cdn.discordapp.com/attachments/1328252771417194538/1457442598137499700/a0d3f87fe0d99e1cf38e51b8a1e3a564.jpg";
+    users[userKey].avatar = `/uploads/${filename}`;
+  } else if(!users[userKey].avatar){
+    users[userKey].avatar = "https://cdn.discordapp.com/attachments/1328252771417194538/1457442598137499700/a0d3f87fe0d99e1cf38e51b8a1e3a564.jpg";
   }
 
   save(USERS_FILE, users);
-  res.sendStatus(200);
+  res.json({ success: true });
+});
+
+// Endpoint لإرجاع بيانات المستخدمين (لـ profile load)
+app.get("/users.json", (req,res)=>{
+  res.json(load(USERS_FILE));
 });
 
 // WebSocket للرسائل
