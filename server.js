@@ -5,6 +5,8 @@ const bcrypt = require("bcrypt");
 const fs = require("fs");
 const crypto = require("crypto");
 const cors = require("cors");
+const path = require("path");
+const fileUpload = require("express-fileupload");
 
 const app = express();
 const server = http.createServer(app);
@@ -12,7 +14,9 @@ const io = new Server(server, { cors: { origin: "*" } });
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static("public")); // كل الملفات داخل public
+app.use(express.urlencoded({ extended: true }));
+app.use(fileUpload());
+app.use(express.static("public"));
 app.use("/uploads", express.static("uploads"));
 
 // Environment Variables
@@ -26,11 +30,12 @@ const USERS_FILE = "users.json";
 const MSG_FILE = "messages.json";
 if (!fs.existsSync(USERS_FILE)) fs.writeFileSync(USERS_FILE, "{}");
 if (!fs.existsSync(MSG_FILE)) fs.writeFileSync(MSG_FILE, "[]");
+if (!fs.existsSync("uploads")) fs.mkdirSync("uploads");
 
 function load(file) { return JSON.parse(fs.readFileSync(file)); }
 function save(file, data) { fs.writeFileSync(file, JSON.stringify(data, null, 2)); }
 
-// إنشاء حساب الأدمن عند التشغيل
+// إنشاء حساب الأدمن
 (async () => {
   let users = load(USERS_FILE);
   if (!users[ADMIN_USER]) {
@@ -38,7 +43,8 @@ function save(file, data) { fs.writeFileSync(file, JSON.stringify(data, null, 2)
       name: "ADMIN",
       pass: await bcrypt.hash(ADMIN_PASS, 12),
       admin: true,
-      token: crypto.randomBytes(32).toString("hex")
+      token: crypto.randomBytes(32).toString("hex"),
+      avatar: "/uploads/admin.png"
     };
     save(USERS_FILE, users);
   }
@@ -46,14 +52,15 @@ function save(file, data) { fs.writeFileSync(file, JSON.stringify(data, null, 2)
 
 // تسجيل مستخدم جديد
 app.post("/register", async (req, res) => {
-  const { user, pass, name } = req.body;
+  const { user, pass } = req.body;
   let users = load(USERS_FILE);
   if (users[user]) return res.sendStatus(403);
   users[user] = {
-    name,
     pass: await bcrypt.hash(pass, 12),
     admin: false,
-    token: crypto.randomBytes(32).toString("hex")
+    token: crypto.randomBytes(32).toString("hex"),
+    avatar: "",
+    name: ""
   };
   save(USERS_FILE, users);
   res.sendStatus(200);
@@ -66,11 +73,30 @@ app.post("/login", async (req, res) => {
   if (!users[user]) return res.sendStatus(403);
   const ok = await bcrypt.compare(pass, users[user].pass);
   if (!ok) return res.sendStatus(403);
-  res.json({
-    token: users[user].token,
-    name: users[user].name,
-    admin: users[user].admin
-  });
+  res.json({ token: users[user].token });
+});
+
+// حفظ الاسم والصورة بعد تسجيل الدخول
+app.post("/profile", (req, res) => {
+  const { token, name } = req.body;
+  let users = load(USERS_FILE);
+  let user = Object.keys(users).find(u => users[u].token === token);
+  if (!user) return res.sendStatus(403);
+
+  users[user].name = name;
+
+  // حفظ صورة إذا موجودة
+  if (req.files && req.files.avatar) {
+    let avatar = req.files.avatar;
+    let ext = path.extname(avatar.name);
+    let filename = `${user}${ext}`;
+    avatar.mv(`uploads/${filename}`, err => {
+      if(err) console.log(err);
+    });
+    users[user].avatar = `/uploads/${filename}`;
+  }
+  save(USERS_FILE, users);
+  res.sendStatus(200);
 });
 
 // WebSocket للرسائل
