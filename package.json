@@ -1,6 +1,7 @@
 {
   "name": "red-devil-chat",
   "version": "1.0.0",
+  "description": "Red Devil Private Group",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
