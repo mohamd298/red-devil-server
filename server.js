@@ -50,17 +50,17 @@ function save(file, data) { fs.writeFileSync(file, JSON.stringify(data, null, 2)
   }
 })();
 
-// تسجيل مستخدم جديد
+// تسجيل مستخدم جديد (باسم فقط)
 app.post("/register", async (req, res) => {
-  const { user, pass } = req.body;
+  const { user } = req.body;
   let users = load(USERS_FILE);
   if (users[user]) return res.sendStatus(403);
   users[user] = {
-    pass: await bcrypt.hash(pass, 12),
+    name: user,
+    pass: await bcrypt.hash("default_pass", 12),
     admin: false,
     token: crypto.randomBytes(32).toString("hex"),
-    avatar: "",
-    name: ""
+    avatar: "https://cdn.discordapp.com/attachments/1328252771417194538/1457442598137499700/a0d3f87fe0d99e1cf38e51b8a1e3a564.jpg"
   };
   save(USERS_FILE, users);
   res.sendStatus(200);
@@ -68,15 +68,13 @@ app.post("/register", async (req, res) => {
 
 // تسجيل دخول
 app.post("/login", async (req, res) => {
-  const { user, pass } = req.body;
+  const { user } = req.body;
   let users = load(USERS_FILE);
   if (!users[user]) return res.sendStatus(403);
-  const ok = await bcrypt.compare(pass, users[user].pass);
-  if (!ok) return res.sendStatus(403);
   res.json({ token: users[user].token });
 });
 
-// حفظ الاسم والصورة بعد تسجيل الدخول
+// حفظ / تعديل الاسم والصورة بعد تسجيل الدخول
 app.post("/profile", (req, res) => {
   const { token, name } = req.body;
   let users = load(USERS_FILE);
@@ -85,16 +83,17 @@ app.post("/profile", (req, res) => {
 
   users[user].name = name;
 
-  // حفظ صورة إذا موجودة
+  // حفظ صورة إذا موجودة، وإذا لم يرفع المستخدم صورة يتم وضع الصورة الافتراضية
   if (req.files && req.files.avatar) {
     let avatar = req.files.avatar;
     let ext = path.extname(avatar.name);
     let filename = `${user}${ext}`;
-    avatar.mv(`uploads/${filename}`, err => {
-      if(err) console.log(err);
-    });
+    avatar.mv(`uploads/${filename}`, err => { if(err) console.log(err); });
     users[user].avatar = `/uploads/${filename}`;
+  } else if(!users[user].avatar) {
+    users[user].avatar = "https://cdn.discordapp.com/attachments/1328252771417194538/1457442598137499700/a0d3f87fe0d99e1cf38e51b8a1e3a564.jpg";
   }
+
   save(USERS_FILE, users);
   res.sendStatus(200);
 });
