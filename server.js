@@ -8,31 +8,34 @@ const cors = require("cors");
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, {
-  cors: { origin: "*" } // السماح لجميع المواقع
-});
+const io = new Server(server, { cors: { origin: "*" } });
 
 app.use(cors());
 app.use(express.json());
 app.use("/uploads", express.static("uploads"));
 
+// Environment Variables
+const PORT = process.env.PORT || 3000;
+const ADMIN_USER = process.env.ADMIN_USER || "red_admin";
+const ADMIN_PASS = process.env.ADMIN_PASS || "R3dD3v!l_2026";
+const SECRET_KEY = process.env.SECRET_KEY || "R3dD3v!l_S3cr3t_2026";
+
+// ملفات المستخدمين والرسائل
 const USERS_FILE = "users.json";
 const MSG_FILE = "messages.json";
-
-// إنشاء ملفات إذا ما موجودة
 if (!fs.existsSync(USERS_FILE)) fs.writeFileSync(USERS_FILE, "{}");
 if (!fs.existsSync(MSG_FILE)) fs.writeFileSync(MSG_FILE, "[]");
 
 function load(file) { return JSON.parse(fs.readFileSync(file)); }
 function save(file, data) { fs.writeFileSync(file, JSON.stringify(data, null, 2)); }
 
-// حساب الأدمن
+// إنشاء حساب الأدمن عند التشغيل
 (async () => {
   let users = load(USERS_FILE);
-  if (!users.red_admin) {
-    users.red_admin = {
+  if (!users[ADMIN_USER]) {
+    users[ADMIN_USER] = {
       name: "ADMIN",
-      pass: await bcrypt.hash("R3dD3v!l_2026", 12),
+      pass: await bcrypt.hash(ADMIN_PASS, 12),
       admin: true,
       token: crypto.randomBytes(32).toString("hex")
     };
@@ -69,7 +72,7 @@ app.post("/login", async (req, res) => {
   });
 });
 
-// سوكيت الرسائل
+// WebSocket للرسائل
 io.on("connection", socket => {
   socket.on("msg", data => {
     let msgs = load(MSG_FILE);
@@ -79,6 +82,4 @@ io.on("connection", socket => {
   });
 });
 
-server.listen(3000, () => {
-  console.log("🔥 Red Devil Server Running on port 3000");
-});
+server.listen(PORT, () => console.log(`🔥 Red Devil Server Running on port ${PORT}`));
