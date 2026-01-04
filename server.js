@@ -19,12 +19,10 @@ app.use(fileUpload());
 app.use(express.static("public"));
 app.use("/uploads", express.static("uploads"));
 
-// Environment Variables
 const PORT = process.env.PORT || 3000;
 const ADMIN_USER = process.env.ADMIN_USER || "red_admin";
 const ADMIN_PASS = process.env.ADMIN_PASS || "R3dD3v!l_2026";
 
-// ملفات المستخدمين والرسائل
 const USERS_FILE = "users.json";
 const MSG_FILE = "messages.json";
 
@@ -50,7 +48,7 @@ function save(file, data) { fs.writeFileSync(file, JSON.stringify(data, null, 2)
   }
 })();
 
-// تسجيل مستخدم جديد (باسم فقط)
+// تسجيل مستخدم جديد
 app.post("/register", async (req, res) => {
   const { user } = req.body;
   let users = load(USERS_FILE);
@@ -66,7 +64,7 @@ app.post("/register", async (req, res) => {
   res.sendStatus(200);
 });
 
-// تسجيل دخول
+// تسجيل الدخول
 app.post("/login", async (req, res) => {
   const { user } = req.body;
   let users = load(USERS_FILE);
@@ -74,7 +72,7 @@ app.post("/login", async (req, res) => {
   res.json({ token: users[user].token });
 });
 
-// حفظ / تعديل الاسم والصورة بعد تسجيل الدخول
+// حفظ / تعديل الاسم + الصورة
 app.post("/profile", (req, res) => {
   const { token, name } = req.body;
   if(!token || !name) return res.sendStatus(400);
@@ -85,7 +83,6 @@ app.post("/profile", (req, res) => {
 
   users[userKey].name = name;
 
-  // حفظ صورة إذا موجودة، وإذا لم يرفع المستخدم صورة يتم وضع الصورة الافتراضية
   if (req.files && req.files.avatar) {
     let avatar = req.files.avatar;
     let ext = path.extname(avatar.name);
@@ -100,10 +97,7 @@ app.post("/profile", (req, res) => {
   res.json({ success: true });
 });
 
-// Endpoint لإرجاع بيانات المستخدمين (لـ profile load)
-app.get("/users.json", (req,res)=>{
-  res.json(load(USERS_FILE));
-});
+app.get("/users.json", (req,res)=> res.json(load(USERS_FILE)));
 
 // WebSocket للرسائل
 io.on("connection", socket => {
