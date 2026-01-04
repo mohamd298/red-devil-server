@@ -5,19 +5,27 @@ const path = require("path");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
+// مهم جدًا
 app.use(cors());
-app.use(express.json());
-app.use(express.static("public"));
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true }));
 
-// قاعدة بيانات مؤقتة
+app.use(express.static(path.join(__dirname, "public")));
+
 let users = {};
 
+// فحص
+app.get("/api/ping", (req, res) => {
+  res.json({ ok: true });
+});
+
 // تسجيل دخول
-app.post("/login", (req, res) => {
+app.post("/api/login", (req, res) => {
+  console.log("LOGIN BODY:", req.body);
+
   const { username } = req.body;
 
-  if (!username || username.trim().length < 3) {
+  if (!username || username.length < 3) {
     return res.status(400).json({ error: "اسم غير صالح" });
   }
 
@@ -29,28 +37,34 @@ app.post("/login", (req, res) => {
     };
   }
 
-  res.json({ success: true, user: users[username] });
+  res.json({
+    success: true,
+    user: users[username]
+  });
 });
 
-// تحديث الملف الشخصي
-app.post("/profile", (req, res) => {
+// حفظ الملف الشخصي
+app.post("/api/profile", (req, res) => {
+  console.log("PROFILE BODY:", req.body);
+
   const { username, avatar } = req.body;
 
   if (!users[username]) {
-    return res.status(404).json({ error: "المستخدم غير موجود" });
+    return res.status(404).json({ error: "User not found" });
   }
 
-  users[username].avatar = avatar || users[username].avatar;
+  if (avatar && avatar.startsWith("http")) {
+    users[username].avatar = avatar;
+  }
 
   res.json({ success: true });
 });
 
-// فحص السيرفر
-app.get("/health", (req, res) => {
-  res.json({ status: "OK", server: "Red Devil Online" });
+// fallback
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-// تشغيل
 app.listen(PORT, () => {
-  console.log("🔥 Server running on port", PORT);
+  console.log("🔥 Red Devil Server running on", PORT);
 });
