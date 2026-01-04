@@ -1,11 +1,19 @@
-"dependencies": {
-  "bcrypt": "^5.1.1",
-  "cors": "^2.8.5",
-  "express": "^4.18.2",
-  "multer": "1.4.5",
-  "socket.io": "^4.7.5"
-},
-"scripts": {
-  "start": "node server.js",
-  "preinstall": "npm cache clean --force"
+{
+  "name": "red-devil-chat",
+  "version": "1.0.0",
+  "description": "Red Devil Chat – قروب شات مشفر",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "preinstall": "npm cache clean --force"
+  },
+  "author": "Mohamed",
+  "license": "MIT",
+  "dependencies": {
+    "bcrypt": "^5.1.1",
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "multer": "1.4.5",
+    "socket.io": "^4.7.5"
+  }
 }
